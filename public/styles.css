@@ -1,9 +1,113 @@
-/* Ensure the body takes up the full height */
 body {
     margin: 0;
+    font-family: system-ui;
+    padding: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a472a, #2d5a40);
+    color: white;
+    position: relative;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    justify-content: space-between;
+}
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    background: rgba(178, 34, 34, 0.15);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: #333;
+}
+h1 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: #e4002b;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+form { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 1.2rem;
+    align-items: center; 
+    text-align: center;  
+}
+label { 
+    font-weight: bold;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    color: white;
+    text-shadow: 0 0 5px white;
+    width: 100%;
+    justify-content: center;
+}
+input, select, textarea {
+    padding: 0.8rem;
+    margin-top: 0.25rem;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #e4002b;
+}
+button {
+    padding: 1rem;
+    background: #e4002b;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+button:hover {
+    background: #b30022;
+    transform: translateY(-2px);
+}
+footer {
+    text-align: center;
+    padding: 1rem;
+    position: relative;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    background-color: rgba(178, 34, 34, 0.3);
+    width: 100%;
+    margin-top: auto;
+}
+/* Snow animation */
+@keyframes snowfall {
+    0% { 
+        transform: translateY(-10vh) translateX(0); 
+        opacity: 1;
+    }
+    100% { 
+        transform: translateY(100vh) translateX(20px);
+        opacity: 0.3;
+    }
+}
+.snowflake {
+    position: fixed;
+    top: -10vh;
+    animation: snowfall 15s linear infinite;
+    color: white;
+    opacity: 0.7;
+    text-shadow: 0 0 5px white;
+    pointer-events: none;
+    z-index: 1;
+    font-size: 24px;
+}
+.snowflake:nth-child(2n) { 
+    animation-duration: 12s; 
+    font-size: 16px;
+}
+.snowflake:nth-child(3n) { 
+    animation-duration: 18s;
+    font-size: 20px; 
 }
 
 /* Main content should expand to fill available space */
@@ -23,4 +127,57 @@ footer {
 
 footer a {
 	color: #fff;
+}
+
+/* Recommendation page */
+.recommendations {
+    list-style: none;
+    padding: 0;
+}
+.recommendations li {
+    padding: 1rem;
+    margin: 1rem 0;
+    background: rgba(178, 34, 34, 0.1);
+    border-radius: 8px;
+    font-size: 1.1rem;
+}
+.back-button {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    background: #e4002b;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    margin-top: 1rem;
+    transition: all 0.3s ease;
+}
+.back-button:hover {
+    background: #b30022;
+    transform: translateY(-2px);
+}
+.recommendation-item {
+    padding: 1rem;
+    margin: 0.5rem 0;
+    background: rgba(178, 34, 34, 0.1);
+    border-radius: 8px;
+    font-size: 1.1rem;
+}
+.button-container {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+.history-button {
+    display: inline-block;
+    padding: 0.8rem 1.5rem;
+    background: #2d5a40;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.history-button:hover {
+    background: #1a472a;
+    transform: translateY(-2px);
 }

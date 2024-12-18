@@ -1,21 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Just a website</title>
-	<link rel="stylesheet" href="/styles.css">
-	<script src="/hand.js"></script>
-	<script src="/script.js"></script>
-</head>
-<body>
-	<div class="content">
-		<h1>This is a plain old website</h1>
-		<p>This is just a plain website that is using plain old JavaScript</p>
-		<button onclick="talkToTheHand()">Talk to the hand</button>
-	</div>
-	<footer>
-		<p>Built with 🧡 on <a href="https://developers.cloudflare.com">Cloudflare Workers</a> and the <a href="https://platform.openai.com/docs/api-reference/realtime">OpenAI Realtime API</a></p>
-	</footer>
-</body>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Santa's Little AI Helper 🎅</title>
+		<link rel="stylesheet" href="/styles.css">
+		<script src="/script.js"></script>
+	</head>
+	<body>
+		<script>
+		const snowflakes = Array(20).fill('❄️').map((_, i) => 
+			`<div class="snowflake" style="left: ${i % 2 === 0 ? '5' : '95'}vw; animation-delay: ${Math.random() * 15}s">❄️</div>`
+		).join('');
+		document.write(snowflakes);
+		</script>
+		<div class="container">
+			<h1>🎅 Santa's Gift-O-Matic 3000 🎁</h1>
+			<form action="/recommendations" method="POST">
+				<div>
+					<label>🎯 Friend's Name:</label>
+					<input type="text" id="name" name="name" required>
+				</div>
+				
+				<div>
+					<label>🎂 Age:</label>
+					<input type="number" id="age" name="age" required min="1" max="120">
+				</div>
+				
+				<div>
+					<label>👤 Gender:</label>
+					<select id="gender" name="gender" required>
+						<option value="">Select one...</option>
+						<option value="male">Male</option>
+						<option value="female">Female</option>
+						<option value="non-binary">Non-binary</option>
+						<option value="other">Other</option>
+					</select>
+				</div>
+				
+				<div>
+					<label>📍 Location:</label>
+					<input type="text" id="location" name="location" required>
+				</div>
+				
+				<div>
+					<label>🎨 Interests:</label>
+					<textarea id="interests" name="interests" required></textarea>
+				</div>
+				
+				<div>
+					<label>🎬 Favorite Movie:</label>
+					<input type="text" id="movie" name="movie" required>
+				</div>
+				
+				<div>
+					<label>⚡ Dream Superpower:</label>
+					<input type="text" id="superpower" name="superpower" required>
+				</div>
+				
+				<div>
+					<label>🍳 Go-to Breakfast:</label>
+					<input type="text" id="breakfast" name="breakfast" required>
+				</div>
+				
+				<div>
+					<label>🦁 Spirit Animal:</label>
+					<input type="text" id="spirit-animal" name="spirit-animal" required>
+				</div>
+
+				<button type="submit">✨ Work Your Magic, Santa! 🎄</button>
+			</form>
+		</div>
+
+		<footer>
+			<a href="/history" class="history-button">📜 View All Recs && leaderboard</a>
+			Made w/ ❤️ using <a href="https://developers.cloudflare.com/workers-ai/" 
+			   style="color: white; text-decoration: underline;"
+			   target="_blank">
+				Cloudflare Workers AI
+			</a> -> 
+			<a href="https://github.com/elizabethsiegle/ai-holiday-gift-recommender" 
+			   style="color: white; text-decoration: underline;"
+			   target="_blank">
+				GitHub
+			</a>
+		</footer>
+	</body>
 </html>

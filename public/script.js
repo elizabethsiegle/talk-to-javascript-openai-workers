@@ -1,12 +1,3 @@
-const hand = new Hand();
-
-function talkToTheHand() {
-	hand
-		.connect()
-		.then(() => console.log('Hand is ready'))
-		.catch((err) => console.error(err));
-}
-
 const fns = {
 	getPageHTML: () => {
 		return { success: true, html: document.documentElement.outerHTML };
@@ -19,9 +10,18 @@ const fns = {
 		document.body.style.color = color;
 		return { success: true, color };
 	},
-	showFingers: async ({ numberOfFingers }) => {
-		await hand.sendCommand(numberOfFingers);
-		return { success: true, numberOfFingers };
+	fillGiftForm: async ({ field, value }) => {
+		const element = document.getElementById(field);
+		if (element) {
+			element.focus();
+			element.value = value;
+			element.dispatchEvent(new Event('input', { bubbles: true }));
+			await new Promise(resolve => setTimeout(resolve, 500));
+			return { success: true, message: `Filled out ${field} with ${value}` };
+		} else {
+			console.error(`Element with id ${field} not found`);
+			return { success: false, message: `Could not find field ${field}` };
+		}
 	},
 };
 
@@ -48,42 +48,24 @@ function configureData() {
 			tools: [
 				{
 					type: 'function',
-					name: 'changeBackgroundColor',
-					description: 'Changes the background color of a web page',
+					name: 'fillGiftForm',
+					description: 'Fills out one field in the gift recommendation form',
 					parameters: {
 						type: 'object',
 						properties: {
-							color: { type: 'string', description: 'A hex value of the color' },
+							field: {
+								type: 'string',
+								enum: ['name', 'age', 'gender', 'location', 'interests', 'movie', 'superpower', 'breakfast', 'spirit-animal'],
+								description: 'Which field to fill out'
+							},
+							value: {
+								type: 'string',
+								description: 'The value to fill in'
+							}
 						},
-					},
-				},
-				{
-					type: 'function',
-					name: 'changeTextColor',
-					description: 'Changes the text color of a web page',
-					parameters: {
-						type: 'object',
-						properties: {
-							color: { type: 'string', description: 'A hex value of the color' },
-						},
-					},
-				},
-				{
-					type: 'function',
-					name: 'showFingers',
-					description: 'Controls a robot hand to show a specific number of fingers',
-					parameters: {
-						type: 'object',
-						properties: {
-							numberOfFingers: { type: 'string', description: 'Values 1 through 5 of the number of fingers to hold up' },
-						},
-					},
-				},
-				{
-					type: 'function',
-					name: 'getPageHTML',
-					description: 'Gets the HTML for the current page',
-				},
+						required: ['field', 'value']
+					}
+				}
 			],
 		},
 	};
