@@ -62,8 +62,6 @@ app.post('/recommendations', async (c) => {
 			role: "user",
 			content: `Based on this information about my friend, suggest 3 unique and thoughtful gift ideas:
 			Name: ${formData.name}
-			Age: ${formData.age}
-			Gender: ${formData.gender}
 			Location: ${formData.location}
 			Interests: ${formData.interests}
 			Favorite Movie: ${formData.movie}
@@ -666,3 +664,23 @@ app.post('/api/save-recommendations', async (c) => {
 export default app;
 
 //export { GiftRecsStore };
+
+async function fillGiftForm(form: HTMLFormElement, data: any) {
+	for (const [key, value] of Object.entries(data)) {
+		const element = form.elements.namedItem(key) as HTMLInputElement | HTMLSelectElement;
+		if (element) {
+			if (element instanceof HTMLSelectElement) {
+				// Handle dropdown menus
+				const option = Array.from(element.options).find(opt => 
+					opt.value.toLowerCase() === String(value).toLowerCase()
+				);
+				if (option) {
+					element.value = option.value;
+				}
+			} else {
+				// Handle regular inputs
+				element.value = String(value);
+			}
+		}
+	}
+}

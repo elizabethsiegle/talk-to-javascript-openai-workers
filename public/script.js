@@ -55,7 +55,7 @@ function configureData() {
 						properties: {
 							field: {
 								type: 'string',
-								enum: ['name', 'age', 'gender', 'location', 'interests', 'movie', 'superpower', 'breakfast', 'spirit-animal'],
+								enum: ['name', 'location', 'interests', 'movie', 'superpower', 'breakfast', 'spirit-animal'],
 								description: 'Which field to fill out'
 							},
 							value: {

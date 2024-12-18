@@ -16,26 +16,16 @@
 		</script>
 		<div class="container">
 			<h1>🎅 Santa's Gift-O-Matic 3000 🎁</h1>
+			<p class="app-description">
+				✨ Fill out this form w/ voice commands! Through the magic of <a href="https://platform.openai.com/docs/api-reference/realtime">OpenAI's Realtime API</a> relayed over <a href="https://developers.cloudflare.com/workers/runtime-apis/webrtc">WebRTC</a>, 
+				you can have a conversation with GPT-4 to help fill out this form. Simply speak your responses, 
+				and our AI helper will suggest perfect gifts using <a href="https://developers.cloudflare.com/workers-ai/models/llama-3.2-3b-instruct/">Llama 3.2</a>. Check out the <a href="/history" class="history-button">📜leaderboard</a> to see 
+				the most magical personalized gift suggestions! 🎄✨
+			</p>
 			<form action="/recommendations" method="POST">
 				<div>
 					<label>🎯 Friend's Name:</label>
 					<input type="text" id="name" name="name" required>
-				</div>
-				
-				<div>
-					<label>🎂 Age:</label>
-					<input type="number" id="age" name="age" required min="1" max="120">
-				</div>
-				
-				<div>
-					<label>👤 Gender:</label>
-					<select id="gender" name="gender" required>
-						<option value="">Select one...</option>
-						<option value="male">Male</option>
-						<option value="female">Female</option>
-						<option value="non-binary">Non-binary</option>
-						<option value="other">Other</option>
-					</select>
 				</div>
 				
 				<div>
@@ -73,7 +63,6 @@
 		</div>
 
 		<footer>
-			<a href="/history" class="history-button">📜 View All Recs && leaderboard</a>
 			Made w/ ❤️ using <a href="https://developers.cloudflare.com/workers-ai/" 
 			   style="color: white; text-decoration: underline;"
 			   target="_blank">
