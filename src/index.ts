@@ -1,8 +1,6 @@
 import { Hono } from 'hono';
 import { html } from 'hono/html';
-// import { GiftRecsStore } from '../durable-objects/GiftRecsStore';
 import { raw as unsafeHTML } from 'hono/html';
-// import { nanoid } from 'nanoid';
 import { z } from 'zod';
 
 export interface Env {
@@ -17,37 +15,140 @@ export { GiftListStore } from '../durable-objects/GiftRecsStore';
 
 const app = new Hono<{ Bindings: Env }>();
 
-const DEFAULT_INSTRUCTIONS = `You are helpful and have some tools installed.
+const DEFAULT_INSTRUCTIONS = `You are a helpful gift recommendation assistant. Your primary task is to:
+1. Listen to the user's questions
+2. Help them fill out the HTML form with the following fields:
+   - name
+   - location
+   - interests
+   - movie (favorite movie)
+   - superpower (desired superpower)
+   - breakfast (favorite breakfast)
+   - spirit-animal
 
-In the tools you have the ability to fill out this HTML form for the user to learn what gift they should give a certain friend. You are also great at giving advice about gift-giving.
-`;
+Only speak to help guide users in filling out these specific form fields. Do not generate gift recommendations verbally - that happens after the form is submitted.`;
+
+
+let activeSession: { id: string; timestamp: number } | null = null;
+
+let isProcessingSession = false;
+
+app.get('/session', async (c) => {
+	if (isProcessingSession) {
+		console.log('Duplicate session request detected');
+		return c.json({ error: 'Session request in progress' }, 409);
+	}
+
+	try {
+		isProcessingSession = true;
+		// If there's an active session, return it
+		if (currentSession) {
+			return c.json({ session_id: currentSession });
+		}
+
+		type SessionResponse = {
+			session_id: string;
+			[key: string]: any;
+		};
+		// make an OpenAI REST API request for an ephemeral key using a standard API key to authenticate this request on your backend server.
+		const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${c.env.OPENAI_API_KEY}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				model: 'gpt-4o-realtime-preview-2024-12-17',
+				voice: 'alloy',
+			}),
+		});
+		const data = await response.json() as SessionResponse;
+		
+		// Store the session
+		currentSession = data.session_id;
+		
+		return c.json(data);
+	} finally {
+		isProcessingSession = false;
+	}
+});
 
 app.post('/rtc-connect', async (c) => {
-	const body = await c.req.text();
-	const url = new URL('https://api.openai.com/v1/realtime');
-	url.searchParams.set('model', 'gpt-4o-realtime-preview-2024-12-17');
-	url.searchParams.set('instructions', DEFAULT_INSTRUCTIONS);
-	url.searchParams.set('voice', 'ash');
+	try {
+		// Log the incoming request
+		console.log('Received RTC connect request');
+		
+		const body = await c.req.text();
+		console.log('Received SDP offer:', body.substring(0, 100) + '...'); // Log first 100 chars
+		
+		const url = new URL('https://api.openai.com/v1/realtime');
+		url.searchParams.set('model', 'gpt-4o-realtime-preview-2024-12-17');
+		url.searchParams.set('instructions', DEFAULT_INSTRUCTIONS);
+		url.searchParams.set('voice', 'alloy');
+		url.searchParams.set('concurrent_agents', '1');
+		url.searchParams.set('force_single_agent', 'true');
+		url.searchParams.set('stream', 'true');
 
-	const response = await fetch(url.toString(), {
-		method: 'POST',
-		body,
-		headers: {
-			Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
-			'Content-Type': 'application/sdp',
-		},
-	});
+		const response = await fetch(url.toString(), {
+			method: 'POST',
+			body,
+			headers: {
+				Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
+				'Content-Type': 'application/sdp',
+			},
+		});
 
-	if (!response.ok) {
-		throw new Error(`OpenAI API error: ${response.status}`);
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error('OpenAI API error:', response.status, errorText);
+			return c.json({ 
+				error: 'Failed to connect to OpenAI', 
+				details: errorText 
+			}, response.status as 400 | 401 | 403 | 404 | 500);
+		}
+
+		const sdp = await response.text();
+		console.log('Received SDP answer:', sdp.substring(0, 100) + '...'); // Log first 100 chars
+
+		// Verify we got a valid SDP answer
+		if (!sdp.startsWith('v=')) {
+			console.error('Invalid SDP answer received:', sdp);
+			return c.json({ 
+				error: 'Invalid SDP answer', 
+				details: 'Response did not start with v=' 
+			}, 500);
+		}
+
+		return c.body(sdp, {
+			headers: {
+				'Content-Type': 'application/sdp',
+			},
+		});
+	} catch (error: any) {
+		console.error('Server error:', error);
+		return c.json({ 
+			error: 'Internal server error', 
+			details: error.message 
+		}, 500);
 	}
-	const sdp = await response.text();
-	return c.body(sdp, {
-		headers: {
-			Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
-			'Content-Type': 'application/sdp',
-		},
-	});
+});
+
+// Add cleanup endpoint
+app.post('/rtc-disconnect', async (c) => {
+	if (activeSession) {
+		try {
+			await fetch(`https://api.openai.com/v1/realtime/sessions/${activeSession.id}`, {
+				method: 'DELETE',
+				headers: {
+					Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
+				},
+			});
+		} catch (e) {
+			console.error('Error cleaning up session:', e);
+		}
+	}
+	activeSession = null;
+	return c.json({ success: true });
 });
 
 app.post('/recommendations', async (c) => {
@@ -661,6 +762,14 @@ app.post('/api/save-recommendations', async (c) => {
 //     return c.text('History cleared');
 // });
 
+// Add a cleanup endpoint if needed
+let currentSession: string | null = null;  // Add this at the top level
+
+app.post('/end-session', async (c) => {
+	currentSession = null;
+	return c.json({ success: true });
+});
+
 export default app;
 
 //export { GiftRecsStore };
@@ -684,3 +793,4 @@ async function fillGiftForm(form: HTMLFormElement, data: any) {
 		}
 	}
 }
+

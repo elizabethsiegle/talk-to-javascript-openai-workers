@@ -11,6 +11,16 @@ const fns = {
 		return { success: true, color };
 	},
 	fillGiftForm: async ({ field, value }) => {
+		if (field === 'submit') {
+			const submitButton = document.querySelector('button[type="submit"]');
+			if (submitButton) {
+				submitButton.click();
+				return { success: true, message: 'Form submitted' };
+			} else {
+				return { success: false, message: 'Submit button not found' };
+			}
+		}
+
 		const element = document.getElementById(field);
 		if (element) {
 			element.focus();
@@ -25,116 +35,197 @@ const fns = {
 	},
 };
 
-// Create a WebRTC Agent
-const peerConnection = new RTCPeerConnection();
+let dataChannel = null;
+let peerConnection = null;
+let isConnecting = false;
 
-// On inbound audio add to page
-peerConnection.ontrack = (event) => {
-	const el = document.createElement('audio');
-	el.srcObject = event.streams[0];
-	el.autoplay = el.controls = true;
-	document.body.appendChild(el);
-};
+async function initWebRTC() {
+	console.log('Initializing WebRTC. Current state:', { 
+		isConnecting,
+		hasDataChannel: !!dataChannel,
+		hasPeerConnection: !!peerConnection 
+	});
 
-const dataChannel = peerConnection.createDataChannel('response');
-
-function configureData() {
-	console.log('Configuring data channel');
-	const event = {
-		type: 'session.update',
-		session: {
-			modalities: ['text', 'audio'],
-			// Provide the tools. Note they match the keys in the `fns` object above
-			tools: [
-				{
-					type: 'function',
-					name: 'fillGiftForm',
-					description: 'Fills out one field in the gift recommendation form',
-					parameters: {
-						type: 'object',
-						properties: {
-							field: {
-								type: 'string',
-								enum: ['name', 'location', 'interests', 'movie', 'superpower', 'breakfast', 'spirit-animal'],
-								description: 'Which field to fill out'
-							},
-							value: {
-								type: 'string',
-								description: 'The value to fill in'
-							}
-						},
-						required: ['field', 'value']
-					}
-				}
-			],
-		},
-	};
-	dataChannel.send(JSON.stringify(event));
-}
-
-dataChannel.addEventListener('open', (ev) => {
-	console.log('Opening data channel', ev);
-	configureData();
-});
-
-// {
-//     "type": "response.function_call_arguments.done",
-//     "event_id": "event_Ad2gt864G595umbCs2aF9",
-//     "response_id": "resp_Ad2griUWUjsyeLyAVtTtt",
-//     "item_id": "item_Ad2gsxA84w9GgEvFwW1Ex",
-//     "output_index": 1,
-//     "call_id": "call_PG12S5ER7l7HrvZz",
-//     "name": "get_weather",
-//     "arguments": "{\"location\":\"Portland, Oregon\"}"
-// }
-
-dataChannel.addEventListener('message', async (ev) => {
-	const msg = JSON.parse(ev.data);
-	// Handle function calls
-	if (msg.type === 'response.function_call_arguments.done') {
-		const fn = fns[msg.name];
-		if (fn !== undefined) {
-			console.log(`Calling local function ${msg.name} with ${msg.arguments}`);
-			const args = JSON.parse(msg.arguments);
-			const result = await fn(args);
-			console.log('result', result);
-			// Let OpenAI know that the function has been called and share it's output
-			const event = {
-				type: 'conversation.item.create',
-				item: {
-					type: 'function_call_output',
-					call_id: msg.call_id, // call_id from the function_call message
-					output: JSON.stringify(result), // result of the function
-				},
-			};
-			dataChannel.send(JSON.stringify(event));
-		}
+	if (isConnecting) {
+		console.log('Already connecting, aborting new connection attempt');
+		return;
 	}
-});
 
-// Capture microphone
-navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-	// Add microphone to PeerConnection
-	stream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
+	try {
+		isConnecting = true;
 
-	peerConnection.createOffer().then((offer) => {
-		peerConnection.setLocalDescription(offer);
+		if (peerConnection) {
+			console.log('Closing existing peer connection');
+			peerConnection.close();
+			peerConnection = null;
+		}
+		if (dataChannel) {
+			console.log('Closing existing data channel');
+			dataChannel.close();
+			dataChannel = null;
+		}
+		//initialize a WebRTC session (including the data channel to send and receive Realtime API events). assumes you have already fetched an ephemeral API token
+		console.log('Creating new peer connection');
+		peerConnection = new RTCPeerConnection();
 
-		// Send WebRTC Offer to Workers Realtime WebRTC API Relay
-		fetch('/rtc-connect', {
+		// Create a data channel from a peer connection
+		console.log('Creating new data channel');
+		dataChannel = peerConnection.createDataChannel('audio', {
+			ordered: true,	
+		});
+
+		dataChannel.onopen = () => {
+			console.log('Data channel opened with ID:', dataChannel.id);
+			
+			// Add a small delay to ensure our tool registration happens after session creation
+			setTimeout(() => {
+				const event = {
+					type: 'session.update',
+					session: {
+						modalities: ['text', 'audio'],
+						tools: [
+							{
+								type: 'function',
+								name: 'fillGiftForm',
+								description: 'Fills out one field in the gift recommendation form or submits the form',
+								parameters: {
+									type: 'object',
+									properties: {
+										field: {
+											type: 'string',
+											enum: ['name', 'location', 'interests', 'movie', 'superpower', 'breakfast', 'spirit-animal', 'submit'],
+											description: 'Which field to fill out, or "submit" to click the submit button'
+										},
+										value: {
+											type: 'string',
+											description: 'The value to fill in (not needed for submit action)'
+										}
+									},
+									required: ['field']
+								}
+							}
+						],
+					},
+				};
+				console.log('Sending tool registration:', event);
+				dataChannel.send(JSON.stringify(event));
+			}, 1000);  // Wait 1 second after channel opens
+		};
+
+		dataChannel.onmessage = async (ev) => {
+			console.log('Received message:', ev.data);
+			const msg = JSON.parse(ev.data);
+			
+			if (msg.type === 'function_call') {
+				console.log('Function call received:', msg);
+				if (msg.function.name === 'fillGiftForm') {
+					console.log('Attempting to fill form with:', msg.function.parameters);
+					const params = JSON.parse(msg.function.parameters);
+					const result = await fns.fillGiftForm(params);
+					console.log('Fill form result:', result);
+					
+					const event = {
+						type: 'conversation.item.create',
+						item: {
+							type: 'function_call_output',
+							call_id: msg.function.call_id,
+							output: JSON.stringify(result),
+						},
+					};
+					console.log('Sending response:', event);
+					dataChannel.send(JSON.stringify(event));
+				}
+			}
+			
+			if (msg.type === 'response.function_call_arguments.done') {
+				const fn = fns[msg.name];
+				if (fn !== undefined) {
+					console.log(`Calling local function ${msg.name} with ${msg.arguments}`);
+					const args = JSON.parse(msg.arguments);
+					const result = await fn(args);
+					console.log('result', result);
+					const event = {
+						type: 'conversation.item.create',
+						item: {
+							type: 'function_call_output',
+							call_id: msg.call_id,
+							output: JSON.stringify(result),
+						},
+					};
+					dataChannel.send(JSON.stringify(event));
+				}
+			}
+		};
+
+		peerConnection.ontrack = (event) => {
+			const el = document.createElement('audio');
+			el.srcObject = event.streams[0];
+			el.autoplay = el.controls = true;
+			document.body.appendChild(el);
+		};
+
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		stream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
+
+		const offer = await peerConnection.createOffer();
+		await peerConnection.setLocalDescription(offer);
+
+		const response = await fetch('/rtc-connect', {
 			method: 'POST',
 			body: offer.sdp,
 			headers: {
 				'Content-Type': 'application/sdp',
 			},
-		})
-			.then((r) => r.text())
-			.then((answer) => {
-				// Accept answer from Realtime WebRTC API
-				peerConnection.setRemoteDescription({
-					sdp: answer,
-					type: 'answer',
-				});
-			});
-	});
-});
+		});
+
+		const answer = await response.text();
+		await peerConnection.setRemoteDescription({
+			sdp: answer,
+			type: 'answer',
+		});
+
+	} catch (error) {
+		console.error('WebRTC initialization failed:', error);
+		throw error;
+	} finally {
+		isConnecting = false;
+	}
+}
+
+async function cleanup() {
+	console.log('Cleaning up connections');
+	if (peerConnection) {
+		peerConnection.close();
+		peerConnection = null;
+	}
+	if (dataChannel) {
+		dataChannel.close();
+		dataChannel = null;
+	}
+	try {
+		await fetch('/rtc-disconnect', { method: 'POST' });
+	} catch (e) {
+		console.error('Error disconnecting:', e);
+	}
+}
+
+window.addEventListener('beforeunload', cleanup);
+
+initWebRTC();
+
+function fillGiftForm(field, value) {
+	const form = document.getElementById('giftForm');
+	if (!form) {
+		console.error('Form not found');
+		return;
+	}
+
+	const input = form.querySelector(`[name="${field}"]`);
+	if (input) {
+		input.value = value;
+		// Trigger change event to update any listeners
+		input.dispatchEvent(new Event('change'));
+	} else {
+		console.error(`Field ${field} not found`);
+	}
+}
