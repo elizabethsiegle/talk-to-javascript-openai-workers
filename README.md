@@ -1,4 +1,9 @@
 # Client Side Tool Calling with the OpenAI WebRTC Realtime API
+<img width="1686" alt="image" src="https://github.com/user-attachments/assets/0bbd386a-fa27-49de-851d-f69aa7639be8" />
+
+<img width="590" alt="image" src="https://github.com/user-attachments/assets/a6322dd2-3eeb-4703-a4cd-21fd6c43515f" />
+
+
 
 This project is a fork of [this repo](https://github.com/craigsdennis/talk-to-javascript-openai-workers) by my wonderful teammate [Craig Dennis](https://x.com/craigsdennis). It's a [Cloudflare Workers](https://developers.cloudflare.com) app using [Hono](https://honojs.dev) to relay the [OpenAI Realtime API](https://platform.openai.com/docs/api-reference/realtime) over WebRTC. The main file is static, then the resulting files are dynamic.
 
