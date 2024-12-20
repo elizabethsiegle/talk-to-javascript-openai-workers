@@ -4,6 +4,8 @@ This project is a fork of [this repo](https://github.com/craigsdennis/talk-to-ja
 
 It edits Craig's fork to fill out a form on a webpage via your voice. When you submit the form, [Llama-3.2-3b-instruct hosted on Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/models/llama-3.2-3b-instruct/) generates gift recommendations for someone according to how you answer the questions, and then saves the gift recommendation and people can rate and thus rank the gift recommendations.
 
+It does [create an ephemeral token](https://platform.openai.com/docs/guides/realtime-webrtc#creating-an-ephemeral-token) and [create a data channel](https://platform.openai.com/docs/guides/realtime-webrtc#sending-and-receiving-events).
+
 [<img src="https://img.youtube.com/vi/TcOytsfva0o/0.jpg">](https://youtu.be/TcOytsfva0o "Client Side Tool Calling with the OpenAI WebRTC Realtime API")
 
 
